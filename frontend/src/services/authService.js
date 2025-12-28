@@ -7,22 +7,22 @@ const dispatchAuthChange = () => {
 export const authService = {
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
-    if (response.data.data.token) {
+    if (response.data.data?.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
       dispatchAuthChange();
     }
-    return response.data;
+    return response.data.data;
   },
 
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    if (response.data.data.token) {
+    if (response.data.data?.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
       dispatchAuthChange();
     }
-    return response.data;
+    return response.data.data;
   },
 
   logout: () => {
