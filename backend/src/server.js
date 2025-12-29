@@ -23,11 +23,15 @@ connectDB();
 
 app.use(
   cors({
-    origin: ["https://your-frontend-name.vercel.app", "http://localhost:3000"],
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://homeessential.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
-
 
 
 app.use(helmet());
