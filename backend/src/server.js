@@ -53,6 +53,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+app.get("/", (req, res) => {
+  res.status(200).send("Backend is live 🚀");
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
