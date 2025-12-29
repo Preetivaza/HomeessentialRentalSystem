@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { loginUser } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
     
     try {
       await login(email, password);

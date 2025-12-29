@@ -21,10 +21,14 @@ const app = express();
 
 connectDB();
 
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: ["https://your-frontend-name.vercel.app", "http://localhost:3000"],
+    credentials: true,
+  })
+);
+
+
 
 app.use(helmet());
 
@@ -52,9 +56,6 @@ app.get('/api/health', (req, res) => {
     message: 'Server is running',
     timestamp: new Date().toISOString()
   });
-});
-app.get("/", (req, res) => {
-  res.status(200).send("Backend is live 🚀");
 });
 
 app.use('/api/auth', authRoutes);
