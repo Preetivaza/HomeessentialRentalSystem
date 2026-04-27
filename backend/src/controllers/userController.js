@@ -91,3 +91,53 @@ export const getUserStats = asyncHandler(async (req, res, next) => {
     newUsersThisMonth
   }, 'User statistics retrieved');
 });
+
+// @desc    Upload identity proof for verification
+// @route   POST /api/users/upload-id
+// @access  Private
+export const uploadIdentityProof = asyncHandler(async (req, res, next) => {
+  if (!req.file) {
+    return next(new ErrorResponse('Please upload a file', 400));
+  }
+
+  const user = await User.findById(req.user.id);
+  
+  if (!user) {
+    return next(new ErrorResponse('User not found', 404));
+  }
+
+  // Update user with file path and status
+  user.identityProof = req.file.path;
+  user.verificationStatus = 'pending';
+  await user.save();
+
+  sendResponse(res, 200, { user }, 'Identity proof uploaded successfully. Status: PENDING');
+});
+
+// @desc    Verify or Reject a user's identity proof (Admin only)
+// @route   PUT /api/users/:id/verify
+// @access  Private/Admin
+export const verifyUser = asyncHandler(async (req, res, next) => {
+  const { status, reason } = req.body;
+
+  if (!['verified', 'rejected'].includes(status)) {
+    return next(new ErrorResponse('Invalid status. Use verified or rejected.', 400));
+  }
+
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return next(new ErrorResponse('User not found', 404));
+  }
+
+  user.verificationStatus = status;
+  if (status === 'verified') {
+    user.verificationDate = Date.now();
+  }
+  
+  await user.save();
+
+  // In a real app, you'd send an email notification here
+  
+  sendResponse(res, 200, { user }, `User identity ${status} successfully`);
+});

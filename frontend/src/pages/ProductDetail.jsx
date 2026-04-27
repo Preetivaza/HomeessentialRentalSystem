@@ -1,11 +1,18 @@
-import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Star, Shield, Truck, Calendar } from 'lucide-react'
-import { useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft, Star, Shield, Truck, Calendar, X, Receipt, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { productService } from '../services/productService'
 
 export default function ProductDetail() {
   const { id } = useParams()
-  const [selectedPlan, setSelectedPlan] = useState('6')
+  const navigate = useNavigate()
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(today)
+  const [endDate, setEndDate] = useState(tomorrow)
   const [quantity, setQuantity] = useState(1)
+  const [showReceipt, setShowReceipt] = useState(false)
 
   const product = {
     id: 1,
@@ -32,15 +39,49 @@ export default function ProductDetail() {
       'Color': 'Gray',
       'Weight': '45 kg'
     },
-    pricing: {
-      '3': 399,
-      '6': 299,
-      '12': 249,
-      '24': 199
-    }
+    pricePerDay: 15,
+    securityDeposit: 150,
+    lateFeePerDay: 5
   }
 
   const [selectedImage, setSelectedImage] = useState(0)
+  const [calculation, setCalculation] = useState(null)
+  const [isCalculating, setIsCalculating] = useState(false)
+
+  // Sync with Backend Pricing Engine
+  useEffect(() => {
+    const fetchCalculation = async () => {
+      setIsCalculating(true);
+      try {
+        // Try real backend call if ID is valid, else fallback to mock math for UI development
+        let result = null;
+        if (id && id.length > 5) {
+          result = await productService.calculateCost(id, { startDate, endDate, quantity });
+        } else {
+          // Mock math for static UI
+          await new Promise(r => setTimeout(r, 600)); // fake delay
+          const start = new Date(startDate);
+          start.setHours(0,0,0,0);
+          const end = new Date(endDate);
+          end.setHours(0,0,0,0);
+          const durationRaw = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60 * 24)));
+          
+          const duration = Math.max(durationRaw, product.minRentalDays || 1);
+          const baseRent = product.pricePerDay * duration * quantity;
+          const deposit = product.securityDeposit * quantity;
+          const tax = baseRent * 0.18;
+          result = { duration, baseRent, deposit, tax, delivery: 0, total: baseRent + deposit + tax };
+        }
+        setCalculation(result);
+      } catch (error) {
+        console.error("Calculation Error:", error);
+      } finally {
+        setIsCalculating(false);
+      }
+    };
+
+    fetchCalculation();
+  }, [id, startDate, endDate, quantity]);
 
   return (
     <div className="bg-gray-50 min-h-screen py-8">
@@ -104,26 +145,32 @@ export default function ProductDetail() {
                 </p>
               </div>
 
-              {/* Rental Plans */}
+              {/* Rental Dates */}
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  Select Rental Plan
+                  Select Rental Period
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(product.pricing).map(([months, price]) => (
-                    <button
-                      key={months}
-                      onClick={() => setSelectedPlan(months)}
-                      className={`p-4 border-2 rounded-lg transition-all ${
-                        selectedPlan === months
-                          ? 'border-primary-600 bg-primary-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="text-sm text-gray-600 mb-1">{months} Months</div>
-                      <div className="text-xl font-bold">₹{price}/mo</div>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+                    <input
+                      type="date"
+                      min={today}
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg py-2 px-3 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">End Date</label>
+                    <input
+                      type="date"
+                      min={startDate}
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg py-2 px-3 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -157,12 +204,18 @@ export default function ProductDetail() {
               {/* Total Price */}
               <div className="bg-gray-50 rounded-lg p-4 mb-6">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-gray-600">Total Monthly Cost</span>
+                  <span className="text-gray-600">Base Rent</span>
                   <div>
-                    <span className="text-3xl font-bold text-gray-900">
-                      ₹{product.pricing[selectedPlan] * quantity}
-                    </span>
-                    <span className="text-gray-500 ml-1">/month</span>
+                    {isCalculating || !calculation ? (
+                      <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold text-gray-900">
+                          ₹{calculation?.baseRent}
+                        </span>
+                        <span className="text-gray-500 ml-1">for {calculation?.duration} days</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -172,7 +225,10 @@ export default function ProductDetail() {
                 <button className="btn-primary w-full py-3">
                   Add to Cart
                 </button>
-                <button className="btn-secondary w-full py-3">
+                <button 
+                  onClick={() => setShowReceipt(true)}
+                  className="btn-secondary w-full py-3"
+                >
                   Rent Now
                 </button>
               </div>
@@ -240,6 +296,113 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {showReceipt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary-100 rounded-lg text-primary-600">
+                    <Receipt className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Rental Bill Calculation</h2>
+                    <p className="text-sm text-gray-500">Review your payment details</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowReceipt(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                <div className="flex gap-4 p-4 bg-gray-50 rounded-xl">
+                  <img src={product.images[0]} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                    <p className="text-sm text-gray-500">Dates: {new Date(startDate).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()} • Qty: {quantity}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  {isCalculating || !calculation ? (
+                     <div className="flex justify-center p-4">
+                       <Loader2 className="w-6 h-6 animate-spin text-primary-600" />
+                     </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Base Rent (₹{product.pricePerDay} × {calculation.duration} Days × {quantity})</span>
+                        <span className="font-medium text-gray-900">₹{calculation.baseRent}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Security Deposit (Refundable)</span>
+                        <span className="font-medium text-gray-900">₹{calculation.deposit}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>GST (18% on Rent)</span>
+                        <span className="font-medium text-gray-900">₹{calculation.tax.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-gray-600">
+                        <span>Delivery & Installation</span>
+                        <span className="font-medium text-green-600">Free</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <div className="flex justify-between items-end p-4 mt-4 bg-primary-50 rounded-xl border border-primary-100">
+                    <div>
+                      <p className="font-bold text-primary-900">Total Payable Today</p>
+                      <p className="text-xs text-primary-700 mt-0.5">Rent + Deposit + Taxes</p>
+                    </div>
+                    <span className="text-2xl font-bold text-primary-700">
+                      ₹{calculation?.total.toFixed(2)}
+                    </span>
+                  </div>
+                  
+                  {/* Important Disclaimers */}
+                  <div className="mt-4 space-y-1 text-xs text-gray-400">
+                    <p>• Deposit refundable after inspection</p>
+                    <p>• Late fee applies after due date</p>
+                    <p>• Damage charges extra</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 border-t border-gray-100 bg-gray-50 flex gap-3">
+                <button 
+                  onClick={() => setShowReceipt(false)}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => navigate('/checkout')}
+                  className="flex-1 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium shadow-sm shadow-primary-600/30 transition-all active:scale-[0.98]"
+                >
+                  Proceed to Checkout
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

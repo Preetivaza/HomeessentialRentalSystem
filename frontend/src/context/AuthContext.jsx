@@ -17,9 +17,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on mount
-    const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
-    setLoading(false);
+    try {
+      console.log('AuthContext: Initializing...');
+      const currentUser = authService.getCurrentUser();
+      console.log('AuthContext: Current user:', currentUser);
+      setUser(currentUser);
+      setLoading(false);
+      console.log('AuthContext: Loading complete');
+    } catch (error) {
+      console.error('AuthContext: Error initializing:', error);
+      setLoading(false);
+    }
   }, []);
 
   const login = async (email, password) => {
@@ -48,9 +56,25 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user
   };
 
+  if (loading) {
+    return (
+      <AuthContext.Provider value={value}>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 mesh-bg">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full shadow-sm" />
+            </div>
+          </div>
+          <p className="mt-6 text-slate-500 font-bold tracking-widest uppercase text-xs animate-pulse">Initializing Identity</p>
+        </div>
+      </AuthContext.Provider>
+    );
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

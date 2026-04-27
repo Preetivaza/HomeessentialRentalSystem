@@ -1,70 +1,75 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowRight, ShoppingCart, Info, Star } from 'lucide-react';
 
 export default function ProductCard({ product }) {
-  // Default availability to true if not specified
   const isAvailable = product.available !== undefined ? product.available : true;
 
   return (
-    <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
-      {/* Product Image */}
-      <Link to={`/product/${product.id}`} className="block relative">
-        <div className="aspect-square overflow-hidden bg-gray-100">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="bg-white rounded-xl border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-indigo-200 flex flex-col"
+    >
+      {/* Product Image Section */}
+      <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+        <Link to={`/product/${product._id || product.id}`} className="block h-full w-full">
           <img
-            src={product.image}
+            src={product.images && product.images.length > 0 ? product.images[0] : product.image}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover"
           />
+        </Link>
+
+        {/* Badges */}
+        <div className="absolute top-3 left-3">
+          <span className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm ${
+            isAvailable 
+              ? 'bg-emerald-500 text-white' 
+              : 'bg-slate-200 text-slate-600'
+          }`}>
+            {isAvailable ? 'In Stock' : 'Reserved'}
+          </span>
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="p-5 flex flex-col flex-grow">
+        <div className="flex items-center gap-2 mb-2">
+           <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded">
+            {product.category}
+          </span>
+          <div className="flex items-center gap-1 ml-auto">
+            <Star size={10} className="text-amber-500 fill-amber-500" />
+            <span className="text-[10px] font-bold text-slate-500">4.8</span>
+          </div>
         </div>
 
-        {/* Availability Badge */}
-        <div className="absolute top-3 right-3">
-          {isAvailable ? (
-            <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
-              Available
-            </span>
-          ) : (
-            <span className="bg-red-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
-              Out of Stock
-            </span>
-          )}
-        </div>
-      </Link>
-
-      {/* Product Info */}
-      <div className="p-4">
-        {/* Category */}
-        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-          {product.category}
-        </p>
-
-        {/* Product Name */}
-        <Link to={`/product/${product.id}`}>
-          <h3 className="font-semibold text-gray-900 mb-3 line-clamp-2 hover:text-blue-600 transition-colors">
+        <Link to={`/product/${product._id || product.id}`}>
+          <h3 className="font-bold text-slate-800 mb-4 line-clamp-1 hover:text-indigo-600 transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        {/* Price */}
-        <div className="flex items-baseline gap-1 mb-4">
-          <span className="text-2xl font-bold text-gray-900">
-            ₹{product.price}
-          </span>
-          <span className="text-sm text-gray-500">/day</span>
+        <div className="mt-auto flex items-center justify-between pt-4 border-t border-slate-50">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase leading-none mb-1">Per Day</span>
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold text-slate-900 tracking-tight">
+                ₹{product.monthlyRate || product.price}
+              </span>
+            </div>
+          </div>
+          
+          <Link 
+            to={`/product/${product._id || product.id}`}
+            className="p-2.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white transition-all duration-200"
+          >
+            <ArrowRight size={18} />
+          </Link>
         </div>
-
-        {/* Rent Now Button */}
-        <Link
-          to={`/product/${product.id}`}
-          className={`block w-full text-center px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-            isAvailable
-              ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md transform hover:scale-[1.02] active:scale-[0.98]'
-              : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-          }`}
-          onClick={(e) => !isAvailable && e.preventDefault()}
-        >
-          {isAvailable ? 'Rent Now' : 'Unavailable'}
-        </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }

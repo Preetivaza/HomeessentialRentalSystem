@@ -1,17 +1,19 @@
 import mongoose from 'mongoose';
 
 const connectDB = async () => {
-  console.log('========================================');
-  console.log('⚠️  Using IN-MEMORY Database (Testing Mode)');
-  console.log('========================================');
-  console.log('MongoDB Atlas connection disabled');
-  console.log('Data will be stored in memory only');
-  console.log('========================================');
-  
-  // Skip MongoDB connection for now
-  return null;
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+
+    console.log('========================================');
+    console.log(` MongoDB Connected: ${conn.connection.host}`);
+    console.log('========================================');
+  } catch (error) {
+    console.error('========================================');
+    console.error(`MongoDB Connection Error: ${error.message}`);
+    console.error('Check your .env file and MongoDB Atlas access.');
+    console.log('========================================');
+    process.exit(1);
+  }
 };
 
 export default connectDB;
-
-

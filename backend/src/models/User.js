@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Please add an email'],
+      unique: true,
       lowercase: true,
       trim: true,
       match: [
@@ -45,7 +46,16 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
-    }
+    },
+    verificationStatus: {
+      type: String,
+      enum: ['none', 'pending', 'verified', 'rejected'],
+      default: 'none'
+    },
+    identityProof: {
+      type: String // URL or path to uploaded ID
+    },
+    verificationDate: Date
   },
   {
     timestamps: true
@@ -73,7 +83,5 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Index for better query performance
-userSchema.index({ email: 1 });
 
 export default mongoose.model('User', userSchema);

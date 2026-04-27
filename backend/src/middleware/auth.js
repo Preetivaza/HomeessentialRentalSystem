@@ -1,9 +1,7 @@
 import jwt from 'jsonwebtoken';
 import asyncHandler from './asyncHandler.js';
 import { ErrorResponse } from './errorHandler.js';
-import mockDB from '../config/mockDB.js';
-
-const User = mockDB.User;
+import User from '../models/User.js';
 
 export const protect = asyncHandler(async (req, res, next) => {
   let token;
@@ -43,3 +41,15 @@ export const authorize = (...roles) => {
     next();
   };
 };
+
+export const isVerified = asyncHandler(async (req, res, next) => {
+  if (req.user.verificationStatus !== 'verified') {
+    return next(
+      new ErrorResponse(
+        'Your identity has not been verified. Please upload your ID proof and wait for admin approval before renting.',
+        403
+      )
+    );
+  }
+  next();
+});

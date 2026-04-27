@@ -1,9 +1,7 @@
 import asyncHandler from '../middleware/asyncHandler.js';
 import { ErrorResponse } from '../middleware/errorHandler.js';
 import { sendResponse } from '../utils/ApiResponse.js';
-import mockDB from '../config/mockDB.js';
-
-const User = mockDB.User;
+import User from '../models/User.js';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { name, email, password, phone, address } = req.body;
@@ -45,8 +43,8 @@ export const login = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Please provide email and password', 400));
   }
 
-  // Get user - mockDB returns user with password directly
-  const user = await User.findOne({ email });
+  // Get user with password selected (since it's select: false in model)
+  const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     return next(new ErrorResponse('Invalid credentials', 401));

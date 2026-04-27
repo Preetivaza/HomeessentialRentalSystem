@@ -1,6 +1,54 @@
-import { Package, Clock, CheckCircle, TrendingUp } from 'lucide-react'
+import { Package, Clock, CheckCircle, TrendingUp, PlusCircle } from 'lucide-react'
+import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { productService } from '../services/productService'
 
 export default function Dashboard() {
+  const { user } = useAuth()
+  
+  // Admin form state
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    category: 'furniture',
+    image: '',
+    monthlyRate: '',
+    dailyRate: '',
+    weeklyRate: '',
+    deposit: '',
+    stock: '1'
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [message, setMessage] = useState({ text: '', type: '' })
+
+  const handleAdminSubmit = async (e) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    setMessage({ text: '', type: '' })
+    try {
+      const payload = {
+        ...formData,
+        images: [formData.image],
+        monthlyRate: Number(formData.monthlyRate),
+        dailyRate: Number(formData.dailyRate) || 0,
+        weeklyRate: Number(formData.weeklyRate) || 0,
+        deposit: Number(formData.deposit) || 0,
+        stock: Number(formData.stock) || 1
+      }
+      
+      await productService.createProduct(payload)
+      setMessage({ text: 'Product added successfully!', type: 'success' })
+      setFormData({ name: '', description: '', category: 'furniture', image: '', monthlyRate: '', dailyRate: '', weeklyRate: '', deposit: '', stock: '1' })
+    } catch (error) {
+      setMessage({ text: 'Failed to add product', type: 'error' })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
   const stats = [
     { label: 'Active Rentals', value: '3', icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
     { label: 'Pending Orders', value: '1', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
@@ -82,6 +130,60 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+
+        {user?.role === 'admin' && (
+          <div className="card p-6 mb-8 border-2 border-indigo-100 bg-indigo-50/30">
+            <div className="flex items-center gap-3 mb-6">
+              <PlusCircle className="text-indigo-600" />
+              <h2 className="text-2xl font-bold text-gray-900">Admin: Quick Add Product</h2>
+            </div>
+            
+            {message.text && (
+              <div className={`p-4 mb-6 rounded-lg font-medium text-sm ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {message.text}
+              </div>
+            )}
+
+            <form onSubmit={handleAdminSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Product Name</label>
+                <input required type="text" name="name" value={formData.name} onChange={handleInputChange} className="input-business" placeholder="e.g. Modern Sofa" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Category</label>
+                <select name="category" value={formData.category} onChange={handleInputChange} className="input-business">
+                  <option value="furniture">Furniture</option>
+                  <option value="appliances">Appliances</option>
+                  <option value="electronics">Electronics</option>
+                  <option value="fitness">Fitness</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-semibold text-gray-700">Image URL</label>
+                <input required type="url" name="image" value={formData.image} onChange={handleInputChange} className="input-business" placeholder="https://unsplash.com/..." />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-semibold text-gray-700">Description</label>
+                <textarea required name="description" value={formData.description} onChange={handleInputChange} className="input-business" rows="3" placeholder="Describe the item..."></textarea>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Monthly Rate (₹)</label>
+                <input required type="number" name="monthlyRate" value={formData.monthlyRate} onChange={handleInputChange} className="input-business" min="0" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Stock Quantity</label>
+                <input required type="number" name="stock" value={formData.stock} onChange={handleInputChange} className="input-business" min="1" />
+              </div>
+              
+              <div className="md:col-span-2 pt-4">
+                <button type="submit" disabled={isSubmitting} className="btn-premium w-full">
+                  {isSubmitting ? 'Uploading to Database...' : 'Add Product to Catalog'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Active Rentals */}

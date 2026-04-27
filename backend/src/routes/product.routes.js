@@ -5,7 +5,8 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  checkAvailability
+  checkAvailability,
+  calculateCost
 } from '../controllers/productController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
@@ -16,6 +17,7 @@ const router = express.Router();
 router.get('/', getProducts);
 router.get('/:id', getProduct);
 router.get('/:id/availability', checkAvailability);
+router.post('/:id/calculate', calculateCost);
 
 router.post('/', protect, authorize('admin'), validate(validateProduct), createProduct);
 router.put('/:id', protect, authorize('admin'), validate(validateProduct), updateProduct);

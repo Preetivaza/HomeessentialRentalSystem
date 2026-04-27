@@ -11,4 +11,14 @@ export const productService = {
     const response = await api.get(`/products/${id}`);
     return response.data;
   },
+
+  createProduct: async (productData) => {
+    const response = await api.post('/products', productData);
+    return response.data;
+  },
+
+  calculateCost: async (id, data) => {
+    const response = await api.post(`/products/${id}/calculate`, data);
+    return response.data;
+  }
 };

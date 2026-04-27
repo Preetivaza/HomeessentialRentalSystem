@@ -2,34 +2,43 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 
 const inventoryService = {
-  checkAvailability: async (productId, startDate, endDate, quantity = 1) => {
-    const product = await Product.findById(productId);
+  /**
+   * Check if a product is available for a given date range and quantity
+   * @param {string} productId - ID of the product
+   * @param {Date} startDate - Start date of rental
+   * @param {Date} endDate - End date of rental
+   * @param {number} quantity - Number of items requested
+   * @param {Object} session - Mongoose session for transaction
+   */
+  checkAvailability: async (productId, startDate, endDate, quantity = 1, session = null) => {
+    const query = Product.findById(productId);
+    if (session) query.session(session);
+    
+    const product = await query;
     
     if (!product) {
       return { available: false, message: 'Product not found' };
     }
 
     if (product.stock < quantity) {
-      return { available: false, message: 'Insufficient stock' };
+      return { available: false, message: 'Insufficient base stock' };
     }
 
-    const overlappingOrders = await Order.find({
-      'items.product': productId,
-      status: { $in: ['confirmed', 'active'] },
-      $or: [
-        {
-          'rentalPeriod.startDate': { $lte: endDate },
-          'rentalPeriod.endDate': { $gte: startDate }
-        }
-      ]
+    // 1. Check if the dates overlap with any globally booked ranges
+    const overlaps = product.bookedRanges && product.bookedRanges.some(range => {
+      const rangeStart = new Date(range.startDate);
+      const rangeEnd = new Date(range.endDate);
+      return startDate <= rangeEnd && endDate >= rangeStart;
     });
 
-    const reservedQuantity = overlappingOrders.reduce((total, order) => {
-      const item = order.items.find(i => i.product.toString() === productId.toString());
-      return total + (item ? item.quantity : 0);
-    }, 0);
+    if (overlaps) {
+      return { available: false, message: 'Selected dates are unavailable due to existing reservations.' };
+    }
 
-    const availableStock = product.stock - reservedQuantity;
+    // 2. Check stock vs reserved globally
+    const reservedCount = product.reserved || 0;
+    const maintenanceCount = product.inMaintenanceCount || 0;
+    const availableStock = product.stock - reservedCount - maintenanceCount;
 
     if (availableStock < quantity) {
       return { 
@@ -42,34 +51,23 @@ const inventoryService = {
     return { available: true, availableStock };
   },
 
-  reserveStock: async (productId, quantity) => {
-    const product = await Product.findById(productId);
-    
-    if (product.stock < quantity) {
-      throw new Error('Insufficient stock');
-    }
-
-    // Note: In production, you might want to implement a reservation system
-    // rather than immediately reducing stock
-    return true;
-  },
-
-  releaseStock: async (productId, quantity) => {
-    // Release reserved stock when order is cancelled/completed
-    return true;
-  },
-
-  updateProductStock: async (productId, quantity, operation = 'decrease') => {
+  /**
+   * Update product stock (permanent reduction/increase)
+   */
+  updateProductStock: async (productId, quantity, operation = 'decrease', session = null) => {
     const update = operation === 'decrease' 
       ? { $inc: { stock: -quantity } }
       : { $inc: { stock: quantity } };
     
-    const product = await Product.findByIdAndUpdate(
+    const query = Product.findByIdAndUpdate(
       productId,
       update,
       { new: true, runValidators: true }
     );
-
+    
+    if (session) query.session(session);
+    
+    const product = await query;
     return product;
   }
 };

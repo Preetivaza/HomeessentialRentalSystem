@@ -22,20 +22,29 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please add at least one image']
     }],
-    dailyRate: {
+    pricePerDay: {
       type: Number,
-      required: [true, 'Please add daily rate'],
-      min: [0, 'Daily rate cannot be negative']
+      required: [true, 'Please add a daily price'],
+      min: [0, 'Price cannot be negative']
     },
-    monthlyRate: {
+    securityDeposit: {
       type: Number,
-      required: [true, 'Please add monthly rate'],
-      min: [0, 'Monthly rate cannot be negative']
-    },
-    deposit: {
-      type: Number,
-      required: [true, 'Please add deposit amount'],
+      required: [true, 'Please add a security deposit amount'],
       min: [0, 'Deposit cannot be negative']
+    },
+    lateFeePerDay: {
+      type: Number,
+      default: 0,
+      min: [0, 'Late fee cannot be negative']
+    },
+    minRentalDays: {
+      type: Number,
+      default: 1,
+      min: [1, 'Minimum rental days must be at least 1']
+    },
+    maxRentalDays: {
+      type: Number,
+      min: [1, 'Maximum rental days must be at least 1']
     },
     stock: {
       type: Number,
@@ -43,6 +52,17 @@ const productSchema = new mongoose.Schema(
       min: [0, 'Stock cannot be negative'],
       default: 1
     },
+    reserved: {
+      type: Number,
+      default: 0,
+      min: [0, 'Reserved stock cannot be negative']
+    },
+    bookedRanges: [
+      {
+        startDate: Date,
+        endDate: Date
+      }
+    ],
     specifications: {
       type: Map,
       of: String
@@ -66,6 +86,24 @@ const productSchema = new mongoose.Schema(
         type: Number,
         default: 0
       }
+    },
+    condition: {
+      type: String,
+      enum: ['new', 'good', 'fair', 'needs_repair'],
+      default: 'new'
+    },
+    maintenanceStatus: {
+      isUnderMaintenance: {
+        type: Boolean,
+        default: false
+      },
+      lastMaintenanceDate: Date,
+      nextScheduledMaintenance: Date
+    },
+    inMaintenanceCount: {
+      type: Number, // Number of items CURRENTLY in repair
+      default: 0,
+      min: 0
     }
   },
   {
@@ -79,6 +117,6 @@ const productSchema = new mongoose.Schema(
 productSchema.index({ category: 1 });
 productSchema.index({ tags: 1 });
 productSchema.index({ name: 'text', description: 'text' });
-productSchema.index({ dailyRate: 1, monthlyRate: 1 });
+productSchema.index({ pricePerDay: 1 });
 
 export default mongoose.model('Product', productSchema);

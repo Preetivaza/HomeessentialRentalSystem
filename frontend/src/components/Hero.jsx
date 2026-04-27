@@ -1,121 +1,86 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowRight, CheckCircle2, ShoppingBag } from 'lucide-react';
 
 const Hero = () => {
   return (
-    <section className="bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+    <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden bg-white">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          
           {/* Left Content */}
-          <div className="text-center lg:text-left space-y-6 lg:space-y-8">
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-              Rent Home Essentials{' '}
-              <span className="text-blue-600">Easily</span>
-            </h1>
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8"
+          >
+            <div className="space-y-4">
+              <span className="subheading-business">Premium Rental Service</span>
+              <h1 className="heading-hero">
+                Elevate Your Living Space <span className="text-indigo-600">On Your Terms.</span>
+              </h1>
+              <p className="text-lg text-slate-600 leading-relaxed max-w-xl font-medium">
+                High-quality furniture and appliances delivered to your door. 
+                Flexible monthly plans designed for modern moving.
+              </p>
+            </div>
 
-            {/* Subtitle */}
-            <p className="text-lg sm:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-              Experience affordable living without the commitment. Rent quality
-              home essentials and furniture with flexible plans, fast delivery,
-              and hassle-free returns.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              {/* Primary CTA */}
-              <Link
-                to="/products"
-                className="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
-              >
-                Rent Now
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link to="/products" className="btn-premium group">
+                Browse Collection
+                <ShoppingBag size={18} />
               </Link>
-
-              {/* Secondary CTA */}
-              <Link
-                to="/products"
-                className="px-8 py-4 bg-white text-blue-600 text-lg font-semibold rounded-lg border-2 border-blue-600 hover:bg-blue-50 transition-colors duration-200 transform hover:scale-105 active:scale-95"
-              >
-                Browse Products
+              <Link to="/products" className="btn-secondary">
+                How it works
               </Link>
             </div>
 
-            {/* Trust Indicators */}
-            <div className="flex flex-wrap gap-6 sm:gap-8 justify-center lg:justify-start pt-4">
-              <div className="flex items-center space-x-2">
-                <svg
-                  className="w-5 h-5 text-green-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="text-gray-700 font-medium">Free Delivery</span>
+            <div className="pt-8 grid grid-cols-2 gap-6 border-t border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-50 p-1 rounded-full">
+                  <CheckCircle2 className="text-emerald-500" size={16} />
+                </div>
+                <span className="text-sm font-semibold text-slate-700">Free 24h Setup</span>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <svg
-                  className="w-5 h-5 text-green-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="text-gray-700 font-medium">
-                  Flexible Plans
-                </span>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <svg
-                  className="w-5 h-5 text-green-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="text-gray-700 font-medium">Easy Returns</span>
+              <div className="flex items-center gap-3">
+                <div className="bg-emerald-50 p-1 rounded-full">
+                  <CheckCircle2 className="text-emerald-500" size={16} />
+                </div>
+                <span className="text-sm font-semibold text-slate-700">No Commitments</span>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          {/* Right Image */}
-          <div className="relative">
-            <div className="relative rounded-2xl overflow-hidden shadow-xl">
+          {/* Right Visual */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="relative"
+          >
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-100">
               <img
-                src="/hero-image.jpg"
-                alt="Modern home essentials and furniture"
-                className="w-full h-auto object-cover"
+                src="https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=2158&auto=format&fit=crop"
+                alt="Modern Living Room"
+                className="w-full h-[500px] object-cover"
               />
-              
-              {/* Optional: Floating Badge */}
-              <div className="absolute top-4 right-4 bg-white px-4 py-2 rounded-full shadow-lg">
-                <p className="text-sm font-semibold text-gray-900">
-                  Starting at{' '}
-                  <span className="text-blue-600 text-lg">₹199/mo</span>
-                </p>
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 to-transparent" />
             </div>
+            
+            {/* Value Badge */}
+            <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-xl shadow-xl border border-slate-100 hidden md:block">
+              <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-1">Starting from</p>
+              <p className="text-3xl font-bold text-slate-900">₹499<span className="text-sm text-slate-400 font-medium">/mo</span></p>
+            </div>
+          </motion.div>
 
-            {/* Decorative Elements */}
-            <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-blue-100 rounded-full -z-10 opacity-50"></div>
-            <div className="absolute -top-4 -left-4 w-24 h-24 bg-blue-50 rounded-full -z-10 opacity-50"></div>
-          </div>
         </div>
       </div>
     </section>
   );
 };
+
+
 
 export default Hero;

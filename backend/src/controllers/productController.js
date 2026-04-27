@@ -3,6 +3,7 @@ import { ErrorResponse } from '../middleware/errorHandler.js';
 import { sendResponse } from '../utils/ApiResponse.js';
 import Product from '../models/Product.js';
 import inventoryService from '../services/inventoryService.js';
+import { calculateRentalCost } from '../utils/pricingEngine.js';
 
 export const getProducts = asyncHandler(async (req, res, next) => {
   const page = parseInt(req.query.page) || 1;
@@ -20,9 +21,9 @@ export const getProducts = asyncHandler(async (req, res, next) => {
   }
 
   if (req.query.minPrice || req.query.maxPrice) {
-    filter.dailyRate = {};
-    if (req.query.minPrice) filter.dailyRate.$gte = Number(req.query.minPrice);
-    if (req.query.maxPrice) filter.dailyRate.$lte = Number(req.query.maxPrice);
+    filter.pricePerDay = {};
+    if (req.query.minPrice) filter.pricePerDay.$gte = Number(req.query.minPrice);
+    if (req.query.maxPrice) filter.pricePerDay.$lte = Number(req.query.maxPrice);
   }
 
   if (req.query.tags) {
@@ -109,4 +110,24 @@ export const checkAvailability = asyncHandler(async (req, res, next) => {
   );
 
   sendResponse(res, 200, result, 'Availability checked');
+});
+
+export const calculateCost = asyncHandler(async (req, res, next) => {
+  const { startDate, endDate, quantity } = req.body;
+
+  if (!startDate || !endDate) {
+    return next(new ErrorResponse('Start date and end date are required', 400));
+  }
+
+  const product = await Product.findById(req.params.id);
+  if (!product) {
+    return next(new ErrorResponse('Product not found', 404));
+  }
+
+  try {
+    const costDetails = calculateRentalCost(product, startDate, endDate, parseInt(quantity) || 1);
+    sendResponse(res, 200, costDetails, 'Cost calculated');
+  } catch (err) {
+    return next(new ErrorResponse(err.message, 400));
+  }
 });

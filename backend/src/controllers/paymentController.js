@@ -22,7 +22,7 @@ export const createPaymentIntent = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Order already paid', 400));
   }
 
-  const amount = Math.round((order.totalAmount + order.deposit) * 100);
+  const amount = Math.round((order.totalAmount + order.securityDeposit) * 100);
 
   const paymentIntent = await stripe.paymentIntents.create({
     amount,
@@ -37,7 +37,7 @@ export const createPaymentIntent = asyncHandler(async (req, res, next) => {
     order: orderId,
     user: req.user.id,
     stripePaymentIntentId: paymentIntent.id,
-    amount: order.totalAmount + order.deposit,
+    amount: order.totalAmount + order.securityDeposit,
     status: 'pending'
   });
 

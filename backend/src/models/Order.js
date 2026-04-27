@@ -9,9 +9,21 @@ const orderSchema = new mongoose.Schema(
     },
     items: [
       {
-        product: {
+        productId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: 'Product',
+          required: true
+        },
+        name: {
+          type: String,
+          required: true
+        },
+        pricePerDay: {
+          type: Number,
+          required: true
+        },
+        securityDeposit: {
+          type: Number,
           required: true
         },
         quantity: {
@@ -19,48 +31,103 @@ const orderSchema = new mongoose.Schema(
           required: true,
           min: 1
         },
-        dailyRate: {
+        startDate: {
+          type: Date,
+          required: true
+        },
+        endDate: {
+          type: Date,
+          required: true
+        },
+        duration: {
           type: Number,
           required: true
         },
-        monthlyRate: {
+        baseRent: {
+          type: Number,
+          required: true
+        },
+        deposit: {
+          type: Number,
+          required: true
+        },
+        tax: {
+          type: Number,
+          required: true
+        },
+        total: {
           type: Number,
           required: true
         }
       }
     ],
-    rentalPeriod: {
-      startDate: {
-        type: Date,
-        required: [true, 'Please add start date']
-      },
-      endDate: {
-        type: Date,
-        required: [true, 'Please add end date']
-      },
-      duration: {
-        type: Number
-      }
-    },
     totalAmount: {
       type: Number,
       required: true,
       min: 0
     },
-    deposit: {
+    securityDeposit: {
       type: Number,
       required: true,
       min: 0
     },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'active', 'completed', 'cancelled'],
+      enum: ['pending', 'paid', 'active', 'completed', 'cancelled'],
       default: 'pending'
     },
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'failed', 'refunded'],
+      enum: ['pending', 'success', 'failed'],
       default: 'pending'
+    },
+    lateFeeApplied: {
+      type: Number,
+      default: 0
+    },
+    refundAmount: {
+      type: Number,
+      default: 0
+    },
+    insurance: {
+      opted: {
+        type: Boolean,
+        default: false
+      },
+      amount: {
+        type: Number,
+        default: 0
+      }
+    },
+    depositStatus: {
+      type: String,
+      enum: ['held', 'refunded', 'deducted'],
+      default: 'held'
+    },
+    damageDeduction: {
+      type: Number,
+      default: 0
+    },
+    logistics: {
+      status: {
+        type: String,
+        enum: ['pending', 'scheduled', 'out_for_delivery', 'delivered', 'pickup_scheduled', 'picked_up'],
+        default: 'pending'
+      },
+      deliverySlot: {
+        date: Date,
+        timeWindow: {
+          type: String,
+          enum: ['morning', 'afternoon', 'evening'] // e.g. 9-1, 2-6, 6-9
+        }
+      },
+      pickupSlot: {
+        date: Date,
+        timeWindow: {
+          type: String,
+          enum: ['morning', 'afternoon', 'evening']
+        }
+      }
     },
     shippingAddress: {
       street: {
@@ -84,20 +151,32 @@ const orderSchema = new mongoose.Schema(
         required: true
       }
     },
-    notes: String
+    notes: String,
+    idempotencyKey: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    bundle: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Bundle'
+    }
   },
   {
     timestamps: true
   }
 );
 
-// Calculate duration before saving
+// Items duration should be calculated before saving if not provided
 orderSchema.pre('save', function (next) {
-  if (this.rentalPeriod.startDate && this.rentalPeriod.endDate) {
-    const duration = Math.ceil(
-      (this.rentalPeriod.endDate - this.rentalPeriod.startDate) / (1000 * 60 * 60 * 24)
-    );
-    this.rentalPeriod.duration = duration;
+  if (this.items && this.items.length > 0) {
+    this.items.forEach(item => {
+      if (item.startDate && item.endDate && !item.duration) {
+        item.duration = Math.ceil(
+          (item.endDate - item.startDate) / (1000 * 60 * 60 * 24)
+        );
+      }
+    });
   }
   next();
 });
@@ -105,6 +184,6 @@ orderSchema.pre('save', function (next) {
 // Indexes for better query performance
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
-orderSchema.index({ 'rentalPeriod.startDate': 1, 'rentalPeriod.endDate': 1 });
+orderSchema.index({ 'items.startDate': 1, 'items.endDate': 1 });
 
 export default mongoose.model('Order', orderSchema);
