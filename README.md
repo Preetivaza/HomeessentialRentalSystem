@@ -51,12 +51,6 @@ Frontend runs on: `http://localhost:5173`
 cd backend
 npm install
 
-# Configure .env file
-cp .env.example .env
-# Edit .env with your MongoDB URI, JWT secret, and Stripe keys
-
-npm run dev
-```
 
 Backend runs on: `http://localhost:5000`
 
@@ -96,28 +90,6 @@ npm run preview  # Preview production build
 cd backend
 npm run dev      # Start with auto-reload
 npm start        # Start production server
-```
-
-## Environment Variables
-
-### Frontend
-Create `frontend/.env`:
-```
-VITE_API_URL=http://localhost:5000/api
-```
-
-### Backend
-Create `backend/.env`:
-```
-NODE_ENV=development
-PORT=5000
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRE=30d
-STRIPE_SECRET_KEY=your_stripe_secret
-STRIPE_PUBLISHABLE_KEY=your_stripe_publishable
-STRIPE_WEBHOOK_SECRET=your_webhook_secret
-CLIENT_URL=http://localhost:5173
 ```
 
 ## Deployment
