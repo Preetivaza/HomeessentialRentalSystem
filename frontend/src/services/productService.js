@@ -1,14 +1,14 @@
 import api from './api';
 
 export const productService = {
-  getProducts: async (filters = {}) => {
+  getProducts: async (filters = {}, options = {}) => {
     const params = new URLSearchParams(filters).toString();
-    const response = await api.get(`/products?${params}`);
+    const response = await api.get(`/products?${params}`, options);
     return response.data;
   },
 
-  getProduct: async (id) => {
-    const response = await api.get(`/products/${id}`);
+  getProduct: async (id, options = {}) => {
+    const response = await api.get(`/products/${id}`, options);
     return response.data;
   },
 
@@ -17,8 +17,13 @@ export const productService = {
     return response.data;
   },
 
-  calculateCost: async (id, data) => {
-    const response = await api.post(`/products/${id}/calculate`, data);
+  updateProduct: async (id, productData) => {
+    const response = await api.put(`/products/${id}`, productData);
+    return response.data;
+  },
+
+  calculateCost: async (id, data, options = {}) => {
+    const response = await api.post(`/products/${id}/calculate`, data, options);
     return response.data;
   }
 };

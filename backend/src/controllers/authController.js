@@ -1,28 +1,17 @@
 import asyncHandler from '../middleware/asyncHandler.js';
-import { ErrorResponse } from '../middleware/errorHandler.js';
 import { sendResponse } from '../utils/ApiResponse.js';
-import User from '../models/User.js';
+import authService from '../services/authService.js';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { name, email, password, phone, address } = req.body;
-
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    return next(new ErrorResponse('User already exists with this email', 400));
-  }
-
-  const user = await User.create({
+  const { token, user } = await authService.register({
     name,
     email,
     password,
     phone,
-    address
+    address,
+    ip: req.ip,
   });
-
-  // TODO: Implement actual email service
-  // await emailService.sendWelcomeEmail(user);
-
-  const token = user.getSignedJwtToken();
 
   sendResponse(res, 201, {
     token,
@@ -38,29 +27,7 @@ export const register = asyncHandler(async (req, res, next) => {
 
 export const login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
-
-  if (!email || !password) {
-    return next(new ErrorResponse('Please provide email and password', 400));
-  }
-
-  // Get user with password selected (since it's select: false in model)
-  const user = await User.findOne({ email }).select('+password');
-
-  if (!user) {
-    return next(new ErrorResponse('Invalid credentials', 401));
-  }
-
-  const isMatch = await user.matchPassword(password);
-
-  if (!isMatch) {
-    return next(new ErrorResponse('Invalid credentials', 401));
-  }
-
-  if (!user.isActive) {
-    return next(new ErrorResponse('Account is deactivated', 403));
-  }
-
-  const token = user.getSignedJwtToken();
+  const { token, user } = await authService.login({ email, password, ip: req.ip });
 
   sendResponse(res, 200, {
     token,
@@ -74,50 +41,51 @@ export const login = asyncHandler(async (req, res, next) => {
   }, 'Login successful');
 });
 
-export const getMe = asyncHandler(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
+export const googleLogin = asyncHandler(async (req, res, next) => {
+  const { token: idToken } = req.body;
+  const { token, user } = await authService.googleLogin({ idToken, ip: req.ip });
 
+  sendResponse(
+    res,
+    200,
+    {
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        authProvider: user.authProvider,
+      },
+    },
+    'Google Login successful'
+  );
+});
+
+export const getMe = asyncHandler(async (req, res, next) => {
+  const user = await authService.getMe(req.user.id);
   sendResponse(res, 200, { user }, 'User profile retrieved');
 });
 
 export const updateProfile = asyncHandler(async (req, res, next) => {
-  const fieldsToUpdate = {
-    name: req.body.name,
-    phone: req.body.phone,
-    address: req.body.address
-  };
-
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
-    fieldsToUpdate,
-    {
-      new: true,
-      runValidators: true
-    }
-  );
-
-  sendResponse(res, 200, { user }, 'Profile updated successfully');
+  const updatedUser = await authService.updateProfile(req.user.id, req.body);
+  sendResponse(res, 200, { user: updatedUser }, 'Profile updated successfully');
 });
 
 export const updatePassword = asyncHandler(async (req, res, next) => {
   const { currentPassword, newPassword } = req.body;
-
-  if (!currentPassword || !newPassword) {
-    return next(new ErrorResponse('Please provide current and new password', 400));
-  }
-
-  const user = await User.findById(req.user.id).select('+password');
-
-  const isMatch = await user.matchPassword(currentPassword);
-
-  if (!isMatch) {
-    return next(new ErrorResponse('Current password is incorrect', 401));
-  }
-
-  user.password = newPassword;
-  await user.save();
-
-  const token = user.getSignedJwtToken();
-
+  const { token } = await authService.updatePassword(req.user.id, { currentPassword, newPassword });
   sendResponse(res, 200, { token }, 'Password updated successfully');
+});
+
+export const forgotPassword = asyncHandler(async (req, res, next) => {
+  const { email } = req.body;
+  await authService.forgotPassword(email);
+  sendResponse(res, 200, {}, 'Email sent successfully');
+});
+
+export const resetPassword = asyncHandler(async (req, res, next) => {
+  const { token } = await authService.resetPassword(req.params.resetToken, req.body.password);
+  sendResponse(res, 200, { token }, 'Password reset successful');
 });

@@ -15,42 +15,92 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const readStoredAuth = () => {
+    const rawUser = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    const parsedUser = rawUser ? JSON.parse(rawUser) : null;
+    return { token, user: parsedUser };
+  };
+
+  const persistAuth = ({ token, user }) => {
+    if (token) localStorage.setItem('token', token);
+    if (user) localStorage.setItem('user', JSON.stringify(user));
+  };
+
+  const clearAuth = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
+
   useEffect(() => {
     // Check if user is logged in on mount
     try {
-      console.log('AuthContext: Initializing...');
-      const currentUser = authService.getCurrentUser();
-      console.log('AuthContext: Current user:', currentUser);
+      const { user: currentUser } = readStoredAuth();
       setUser(currentUser);
       setLoading(false);
-      console.log('AuthContext: Loading complete');
     } catch (error) {
-      console.error('AuthContext: Error initializing:', error);
       setLoading(false);
     }
+
+    const syncFromStorage = () => {
+      const { user: currentUser } = readStoredAuth();
+      setUser(currentUser);
+    };
+
+    const handleUnauthorized = () => {
+      clearAuth();
+      setUser(null);
+    };
+
+    window.addEventListener('storage', syncFromStorage);
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('storage', syncFromStorage);
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const login = async (email, password) => {
     const response = await authService.login(email, password);
+    persistAuth(response);
     setUser(response.user);
     return response;
   };
 
   const register = async (userData) => {
     const response = await authService.register(userData);
+    persistAuth(response);
+    setUser(response.user);
+    return response;
+  };
+
+  const googleLogin = async (tokenId) => {
+    const response = await authService.googleLogin(tokenId);
+    persistAuth(response);
     setUser(response.user);
     return response;
   };
 
   const logout = () => {
-    authService.logout();
+    clearAuth();
     setUser(null);
+  };
+
+  const updateProfile = async (userData) => {
+    const response = await authService.updateProfile(userData);
+    if (response.user) {
+      localStorage.setItem('user', JSON.stringify(response.user));
+    }
+    setUser(response.user);
+    return response;
   };
 
   const value = {
     user,
     login,
     register,
+    googleLogin,
+    updateProfile,
     logout,
     loading,
     isAuthenticated: !!user

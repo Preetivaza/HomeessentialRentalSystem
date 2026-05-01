@@ -1,106 +1,35 @@
 import asyncHandler from '../middleware/asyncHandler.js';
-import { ErrorResponse } from '../middleware/errorHandler.js';
 import { sendResponse } from '../utils/ApiResponse.js';
-import Product from '../models/Product.js';
 import inventoryService from '../services/inventoryService.js';
-import { calculateRentalCost } from '../utils/pricingEngine.js';
+import productService from '../services/productService.js';
 
 export const getProducts = asyncHandler(async (req, res, next) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const skip = (page - 1) * limit;
-
-  const filter = {};
-
-  if (req.query.category) {
-    filter.category = req.query.category;
-  }
-
-  if (req.query.search) {
-    filter.$text = { $search: req.query.search };
-  }
-
-  if (req.query.minPrice || req.query.maxPrice) {
-    filter.pricePerDay = {};
-    if (req.query.minPrice) filter.pricePerDay.$gte = Number(req.query.minPrice);
-    if (req.query.maxPrice) filter.pricePerDay.$lte = Number(req.query.maxPrice);
-  }
-
-  if (req.query.tags) {
-    filter.tags = { $in: req.query.tags.split(',') };
-  }
-
-  filter.isAvailable = true;
-
-  const sortBy = req.query.sort || '-createdAt';
-
-  const products = await Product.find(filter)
-    .sort(sortBy)
-    .skip(skip)
-    .limit(limit);
-
-  const total = await Product.countDocuments(filter);
-
-  sendResponse(res, 200, {
-    products,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalProducts: total,
-      hasMore: page * limit < total
-    }
-  }, 'Products retrieved successfully');
+  const result = await productService.listProducts(req.query);
+  sendResponse(res, 200, result, 'Products retrieved successfully');
 });
 
 export const getProduct = asyncHandler(async (req, res, next) => {
-  const product = await Product.findById(req.params.id);
-
-  if (!product) {
-    return next(new ErrorResponse('Product not found', 404));
-  }
-
+  const product = await productService.getProductById(req.params.id);
   sendResponse(res, 200, { product }, 'Product retrieved successfully');
 });
 
 export const createProduct = asyncHandler(async (req, res, next) => {
-  const product = await Product.create(req.body);
-
+  const product = await productService.createProduct(req.body);
   sendResponse(res, 201, { product }, 'Product created successfully');
 });
 
 export const updateProduct = asyncHandler(async (req, res, next) => {
-  let product = await Product.findById(req.params.id);
-
-  if (!product) {
-    return next(new ErrorResponse('Product not found', 404));
-  }
-
-  product = await Product.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true
-  });
-
+  const product = await productService.updateProduct(req.params.id, req.body);
   sendResponse(res, 200, { product }, 'Product updated successfully');
 });
 
 export const deleteProduct = asyncHandler(async (req, res, next) => {
-  const product = await Product.findById(req.params.id);
-
-  if (!product) {
-    return next(new ErrorResponse('Product not found', 404));
-  }
-
-  await product.deleteOne();
-
+  await productService.deleteProduct(req.params.id);
   sendResponse(res, 200, {}, 'Product deleted successfully');
 });
 
 export const checkAvailability = asyncHandler(async (req, res, next) => {
   const { startDate, endDate, quantity } = req.query;
-
-  if (!startDate || !endDate) {
-    return next(new ErrorResponse('Start date and end date are required', 400));
-  }
 
   const result = await inventoryService.checkAvailability(
     req.params.id,
@@ -115,19 +44,11 @@ export const checkAvailability = asyncHandler(async (req, res, next) => {
 export const calculateCost = asyncHandler(async (req, res, next) => {
   const { startDate, endDate, quantity } = req.body;
 
-  if (!startDate || !endDate) {
-    return next(new ErrorResponse('Start date and end date are required', 400));
-  }
+  const calculation = await productService.calculateProductRental(req.params.id, {
+    startDate,
+    endDate,
+    quantity: parseInt(quantity) || 1
+  });
 
-  const product = await Product.findById(req.params.id);
-  if (!product) {
-    return next(new ErrorResponse('Product not found', 404));
-  }
-
-  try {
-    const costDetails = calculateRentalCost(product, startDate, endDate, parseInt(quantity) || 1);
-    sendResponse(res, 200, costDetails, 'Cost calculated');
-  } catch (err) {
-    return next(new ErrorResponse(err.message, 400));
-  }
+  sendResponse(res, 200, calculation, 'Cost calculated successfully');
 });

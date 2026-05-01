@@ -3,11 +3,12 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, user } = useAuth();
+  const { login, googleLogin, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -38,6 +39,20 @@ export default function Login() {
         || err.message 
         || 'Login failed. Please check your credentials.';
       setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await googleLogin(credentialResponse.credential);
+      navigate(from, { replace: true });
+    } catch (err) {
+      console.error('Google login error:', err);
+      setError(err.response?.data?.message || 'Google login failed');
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +131,7 @@ export default function Login() {
               className="btn-premium w-full mt-4"
             >
               {isLoading ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-center">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Signing in...</span>
                 </div>
@@ -127,6 +142,26 @@ export default function Login() {
                 </div>
               )}
             </button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-200"></span>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-slate-400 font-semibold tracking-wider">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => {
+                  setError('Google Sign-In failed');
+                  console.error('Google Sign-In Failed');
+                }}
+                useOneTap
+              />
+            </div>
           </form>
 
           <div className="mt-10 pt-8 border-t border-slate-100 text-center">

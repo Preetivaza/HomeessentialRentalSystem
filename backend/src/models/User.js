@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Please add a name'],
       trim: true,
-      minlength: [2, 'Name must be at least 2 characters']
+      minlength: [3, 'Name must be at least 3 characters']
     },
     email: {
       type: String,
@@ -23,13 +23,31 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Please add a password'],
+      required: function() { return this.authProvider === 'local'; },
       minlength: [6, 'Password must be at least 6 characters'],
       select: false
     },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local'
+    },
+    loginHistory: [
+      {
+        timestamp: { type: Date, default: Date.now },
+        ip: String
+      }
+    ],
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
     phone: {
       type: String,
-      required: [true, 'Please add a phone number']
+      required: function() { return this.authProvider === 'local'; }
     },
     role: {
       type: String,
@@ -64,8 +82,8 @@ const userSchema = new mongoose.Schema(
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
-    next();
+  if (!this.isModified('password') || !this.password) {
+    return next();
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);

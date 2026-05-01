@@ -2,38 +2,20 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '../components/ProductCard';
 import { Filter, X, LayoutGrid, SlidersHorizontal, PackageSearch } from 'lucide-react';
-import { productService } from '../services/productService';
+import { useProducts } from '../hooks/useProducts';
 
 export default function ProductList() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const data = await productService.getProducts();
-        if (data.success && data.data && data.data.products) {
-          setProducts(data.data.products);
-        }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, []);
+  const { products, isLoading: loading } = useProducts({ limit: 50 });
 
   const categories = ['All', 'Furniture', 'Appliances', 'Electronics', 'Kitchen'];
 
   const filteredProducts = products.filter((product) => {
     const categoryMatch = selectedCategory === 'All' || 
       (product.category && product.category.toLowerCase() === selectedCategory.toLowerCase());
-    const priceMatch = product.monthlyRate >= priceRange[0] && product.monthlyRate <= priceRange[1];
+    const priceMatch = (product.pricePerDay || 0) >= priceRange[0] && (product.pricePerDay || 0) <= priceRange[1];
     return categoryMatch && priceMatch;
   });
 

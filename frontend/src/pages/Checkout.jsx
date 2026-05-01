@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { CreditCard, Wallet, Building } from 'lucide-react'
+import { useCart } from '../hooks/useCart'
 
 export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('card')
+  const { items, totals } = useCart()
 
   const orderSummary = {
-    items: 2,
-    subtotal: 448,
-    tax: 80.64,
-    total: 528.64
+    items: items.reduce((sum, x) => sum + (x.quantity || 0), 0),
+    subtotal: totals.subtotal,
+    tax: totals.tax,
+    total: totals.total
   }
 
   return (

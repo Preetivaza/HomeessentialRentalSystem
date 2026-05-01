@@ -26,10 +26,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-console.log("Restarting server to load new .env configuration...");
 
 connectDB().then(() => {
-  seedInitialStaticProducts();
+  seedInitialStaticProducts().then(() => {
+  });
 });
 
 // Ensure upload directory exists
@@ -44,10 +44,12 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(
   cors({
     origin: [
+      process.env.CLIENT_URL,
       "http://localhost:3000",
       "http://localhost:5173",
+      "http://127.0.0.1:3000",
       "https://homeessential.vercel.app",
-    ],
+    ].filter(Boolean),
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
@@ -99,7 +101,6 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5001;
 
 const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
 });
 
 process.on('unhandledRejection', (err) => {
@@ -114,10 +115,8 @@ process.on('unhandledRejection', (err) => {
 });
 
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
   if (server) {
     server.close(() => {
-      console.log('Process terminated');
     });
   }
 });

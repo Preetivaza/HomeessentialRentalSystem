@@ -10,17 +10,22 @@ import {
 } from '../controllers/productController.js';
 import { protect, authorize } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
-import { validateProduct } from '../utils/validators.js';
+import {
+  productBody,
+  listProductsQuery,
+  availabilityQuery,
+  calculateCostBody
+} from '../middleware/schemas/product.schema.js';
 
 const router = express.Router();
 
-router.get('/', getProducts);
+router.get('/', validate({ query: listProductsQuery }), getProducts);
 router.get('/:id', getProduct);
-router.get('/:id/availability', checkAvailability);
-router.post('/:id/calculate', calculateCost);
+router.get('/:id/availability', validate({ query: availabilityQuery }), checkAvailability);
+router.post('/:id/calculate', validate({ body: calculateCostBody }), calculateCost);
 
-router.post('/', protect, authorize('admin'), validate(validateProduct), createProduct);
-router.put('/:id', protect, authorize('admin'), validate(validateProduct), updateProduct);
+router.post('/', protect, authorize('admin'), validate(productBody), createProduct);
+router.put('/:id', protect, authorize('admin'), validate(productBody), updateProduct);
 router.delete('/:id', protect, authorize('admin'), deleteProduct);
 
 export default router;

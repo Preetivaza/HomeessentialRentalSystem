@@ -57,7 +57,7 @@ export default function ProductCard({ product }) {
             <span className="text-[10px] font-semibold text-slate-400 uppercase leading-none mb-1">Per Day</span>
             <div className="flex items-baseline gap-1">
               <span className="text-xl font-bold text-slate-900 tracking-tight">
-                ₹{product.monthlyRate || product.price}
+                ₹{product.pricePerDay || product.price}
               </span>
             </div>
           </div>

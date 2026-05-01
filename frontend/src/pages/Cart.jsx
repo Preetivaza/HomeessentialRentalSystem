@@ -1,65 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingCart, Calendar } from 'lucide-react';
-import { useState } from 'react';
+import { useCart } from '../hooks/useCart';
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Modern Sofa Set',
-      image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',
-      pricePerDay: 299,
-      quantity: 1,
-      rentalDays: 30,
-      category: 'Furniture',
-    },
-    {
-      id: 2,
-      name: 'Washing Machine',
-      image: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400',
-      pricePerDay: 149,
-      quantity: 1,
-      rentalDays: 60,
-      category: 'Appliances',
-    },
-  ]);
-
-  const updateQuantity = (id, change) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
-  };
-
-  const updateRentalDays = (id, days) => {
-    setCartItems((items) =>
-      items.map((item) => (item.id === id ? { ...item, rentalDays: days } : item))
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-  };
-
-  // Calculate totals
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.pricePerDay * item.rentalDays * item.quantity,
-    0
-  );
-  const deliveryFee = 0; // Free delivery
-  const tax = subtotal * 0.18;
-  const total = subtotal + tax + deliveryFee;
-
-  // Rental duration options
-  const rentalOptions = [
-    { days: 30, label: '1 Month' },
-    { days: 60, label: '2 Months' },
-    { days: 90, label: '3 Months' },
-    { days: 180, label: '6 Months' },
-  ];
+  const { items: cartItems, removeItem, updateQuantity, totals, getDurationDays, getItemSubtotal } = useCart();
 
   return (
     <div className="bg-gray-50 min-h-screen py-8">
@@ -99,13 +43,13 @@ export default function Cart() {
             <div className="lg:col-span-2 space-y-4">
               {cartItems.map((item) => (
                 <div
-                  key={item.id}
+                  key={`${item.productId}-${item.startDate}-${item.endDate}`}
                   className="bg-white rounded-xl shadow-md p-4 sm:p-6"
                 >
                   <div className="flex flex-col sm:flex-row gap-4">
                     {/* Product Image */}
                     <Link
-                      to={`/product/${item.id}`}
+                      to={`/product/${item.productId}`}
                       className="flex-shrink-0"
                     >
                       <img
@@ -119,7 +63,7 @@ export default function Cart() {
                     <div className="flex-grow">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <Link to={`/product/${item.id}`}>
+                          <Link to={`/product/${item.productId}`}>
                             <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                               {item.name}
                             </h3>
@@ -129,7 +73,7 @@ export default function Cart() {
                           </p>
                         </div>
                         <button
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.productId, item.startDate, item.endDate)}
                           className="text-gray-400 hover:text-red-600 transition-colors p-2"
                           aria-label="Remove item"
                         >
@@ -137,29 +81,15 @@ export default function Cart() {
                         </button>
                       </div>
 
-                      {/* Rental Duration Selector */}
+                      {/* Rental Duration Summary */}
                       <div className="mb-4">
                         <label className="text-xs text-gray-600 font-medium mb-2 flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5" />
-                          Rental Duration
+                          Rental Period
                         </label>
-                        <div className="flex gap-2 flex-wrap">
-                          {rentalOptions.map((option) => (
-                            <button
-                              key={option.days}
-                              onClick={() =>
-                                updateRentalDays(item.id, option.days)
-                              }
-                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                                item.rentalDays === option.days
-                                  ? 'bg-blue-600 text-white shadow-md'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          ))}
-                        </div>
+                        <p className="text-sm text-gray-700 font-semibold">
+                          {item.startDate} → {item.endDate}
+                        </p>
                       </div>
 
                       {/* Quantity and Price */}
@@ -169,7 +99,7 @@ export default function Cart() {
                             Quantity:
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, -1)}
+                            onClick={() => updateQuantity(item.productId, item.startDate, item.endDate, item.quantity - 1)}
                             className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
                             aria-label="Decrease quantity"
                           >
@@ -179,7 +109,7 @@ export default function Cart() {
                             {item.quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(item.id, 1)}
+                            onClick={() => updateQuantity(item.productId, item.startDate, item.endDate, item.quantity + 1)}
                             className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center justify-center transition-colors"
                             aria-label="Increase quantity"
                           >
@@ -189,10 +119,10 @@ export default function Cart() {
 
                         <div className="text-right">
                           <p className="text-xl font-bold text-gray-900">
-                            ₹{item.pricePerDay * item.rentalDays * item.quantity}
+                            ₹{getItemSubtotal(item).toFixed(2)}
                           </p>
                           <p className="text-xs text-gray-500">
-                            ₹{item.pricePerDay}/day × {item.rentalDays} days
+                            ₹{item.pricePerDay}/day × {getDurationDays(item.startDate, item.endDate)} days
                           </p>
                         </div>
                       </div>
@@ -233,11 +163,11 @@ export default function Cart() {
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span className="font-medium">₹{subtotal}</span>
+                    <span className="font-medium">₹{totals.subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Tax (18% GST)</span>
-                    <span className="font-medium">₹{tax.toFixed(2)}</span>
+                    <span className="font-medium">₹{totals.tax.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery Fee</span>
@@ -253,7 +183,7 @@ export default function Cart() {
                     </span>
                     <div className="text-right">
                       <p className="text-2xl font-bold text-gray-900">
-                        ₹{total.toFixed(2)}
+                        ₹{totals.total.toFixed(2)}
                       </p>
                     </div>
                   </div>

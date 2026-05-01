@@ -1,10 +1,14 @@
-import { Package, Clock, CheckCircle, TrendingUp, PlusCircle } from 'lucide-react'
+import { PlusCircle, Edit2, Save, X } from 'lucide-react'
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { productService } from '../services/productService'
+import { useAuth } from '../hooks/useAuth'
+import { useProducts } from '../hooks/useProducts'
+import { toast } from 'react-toastify'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  
+  // Dashboard Metrics State
+  const { products, setProducts, isLoading: loading, refetch, createProduct, updateProduct } = useProducts({ limit: 50 })
   
   // Admin form state
   const [formData, setFormData] = useState({
@@ -12,15 +16,20 @@ export default function Dashboard() {
     description: '',
     category: 'furniture',
     image: '',
-    monthlyRate: '',
-    dailyRate: '',
-    weeklyRate: '',
-    deposit: '',
+    pricePerDay: '',
+    securityDeposit: '',
+    lateFeePerDay: '5',
     stock: '1'
   })
+  
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState({ text: '', type: '' })
 
+  // Inline Editor State
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+
+  // Add Product Handler
   const handleAdminSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -29,18 +38,17 @@ export default function Dashboard() {
       const payload = {
         ...formData,
         images: [formData.image],
-        monthlyRate: Number(formData.monthlyRate),
-        dailyRate: Number(formData.dailyRate) || 0,
-        weeklyRate: Number(formData.weeklyRate) || 0,
-        deposit: Number(formData.deposit) || 0,
+        pricePerDay: Number(formData.pricePerDay),
+        securityDeposit: Number(formData.securityDeposit),
+        lateFeePerDay: Number(formData.lateFeePerDay) || 0,
         stock: Number(formData.stock) || 1
       }
       
-      await productService.createProduct(payload)
+      await createProduct(payload)
       setMessage({ text: 'Product added successfully!', type: 'success' })
-      setFormData({ name: '', description: '', category: 'furniture', image: '', monthlyRate: '', dailyRate: '', weeklyRate: '', deposit: '', stock: '1' })
+      setFormData({ name: '', description: '', category: 'furniture', image: '', pricePerDay: '', securityDeposit: '', lateFeePerDay: '5', stock: '1' })
     } catch (error) {
-      setMessage({ text: 'Failed to add product', type: 'error' })
+      setMessage({ text: error.response?.data?.error || 'Failed to add product', type: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -49,86 +57,47 @@ export default function Dashboard() {
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
-  const stats = [
-    { label: 'Active Rentals', value: '3', icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { label: 'Pending Orders', value: '1', icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
-    { label: 'Completed', value: '12', icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' },
-    { label: 'Total Savings', value: '₹24,500', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-100' },
-  ]
 
-  const activeRentals = [
-    {
-      id: 1,
-      name: 'Modern Sofa Set',
-      image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400',
-      startDate: '2025-01-01',
-      endDate: '2025-07-01',
-      monthlyPrice: 299,
-      status: 'Active'
-    },
-    {
-      id: 2,
-      name: 'Washing Machine',
-      image: 'https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=400',
-      startDate: '2025-02-15',
-      endDate: '2026-02-15',
-      monthlyPrice: 149,
-      status: 'Active'
-    },
-    {
-      id: 3,
-      name: 'King Size Bed',
-      image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=400',
-      startDate: '2024-12-01',
-      endDate: '2025-06-01',
-      monthlyPrice: 249,
-      status: 'Active'
-    }
-  ]
+  // Inline Editing Handlers
+  const startEditing = (product) => {
+    setEditingId(product._id)
+    setEditForm({
+      pricePerDay: product.pricePerDay,
+      securityDeposit: product.securityDeposit,
+      lateFeePerDay: product.lateFeePerDay || 0
+    })
+  }
 
-  const recentOrders = [
-    { id: 1, name: 'Refrigerator', date: '2025-12-20', status: 'Pending', total: 179 },
-    { id: 2, name: 'LED TV 43"', date: '2025-12-15', status: 'Delivered', total: 199 },
-    { id: 3, name: 'Office Desk', date: '2025-12-10', status: 'Delivered', total: 129 },
-  ]
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditForm({})
+  }
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Active':
-        return 'bg-green-100 text-green-800'
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Delivered':
-        return 'bg-blue-100 text-blue-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+  const handleEditChange = (e) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value })
+  }
+
+  const saveProductEdit = async (id) => {
+    try {
+      const payload = {
+        pricePerDay: Number(editForm.pricePerDay),
+        securityDeposit: Number(editForm.securityDeposit),
+        lateFeePerDay: Number(editForm.lateFeePerDay)
+      }
+      await updateProduct(id, payload)
+      toast.success("Pricing updated successfully!")
+      setEditingId(null)
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to update API")
     }
   }
 
   return (
     <div className="bg-gray-50 min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
           <p className="text-gray-600">Manage your rentals and orders</p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="card p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                </div>
-                <div className={`p-3 rounded-xl ${stat.bg}`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
 
         {user?.role === 'admin' && (
@@ -144,7 +113,7 @@ export default function Dashboard() {
               </div>
             )}
 
-            <form onSubmit={handleAdminSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleAdminSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">Product Name</label>
                 <input required type="text" name="name" value={formData.name} onChange={handleInputChange} className="input-business" placeholder="e.g. Modern Sofa" />
@@ -159,25 +128,35 @@ export default function Dashboard() {
                   <option value="other">Other</option>
                 </select>
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">Image URL</label>
                 <input required type="url" name="image" value={formData.image} onChange={handleInputChange} className="input-business" placeholder="https://unsplash.com/..." />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 md:col-span-3">
                 <label className="text-sm font-semibold text-gray-700">Description</label>
-                <textarea required name="description" value={formData.description} onChange={handleInputChange} className="input-business" rows="3" placeholder="Describe the item..."></textarea>
+                <textarea required name="description" value={formData.description} onChange={handleInputChange} className="input-business" rows="2" placeholder="Describe the item..."></textarea>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Price/Day (₹)</label>
+                <input required type="number" name="pricePerDay" value={formData.pricePerDay} onChange={handleInputChange} className="input-business" min="0" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Monthly Rate (₹)</label>
-                <input required type="number" name="monthlyRate" value={formData.monthlyRate} onChange={handleInputChange} className="input-business" min="0" />
+                <label className="text-sm font-semibold text-gray-700">Security Deposit (₹)</label>
+                <input required type="number" name="securityDeposit" value={formData.securityDeposit} onChange={handleInputChange} className="input-business" min="0" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Stock Quantity</label>
+                <label className="text-sm font-semibold text-gray-700">Late Fee/Day (₹)</label>
+                <input required type="number" name="lateFeePerDay" value={formData.lateFeePerDay} onChange={handleInputChange} className="input-business" min="0" />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Initial Stock</label>
                 <input required type="number" name="stock" value={formData.stock} onChange={handleInputChange} className="input-business" min="1" />
               </div>
               
-              <div className="md:col-span-2 pt-4">
-                <button type="submit" disabled={isSubmitting} className="btn-premium w-full">
+              <div className="md:col-span-2 flex items-end">
+                <button type="submit" disabled={isSubmitting} className="btn-premium w-full h-10 mt-6">
                   {isSubmitting ? 'Uploading to Database...' : 'Add Product to Catalog'}
                 </button>
               </div>
@@ -186,91 +165,94 @@ export default function Dashboard() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Active Rentals */}
+          {/* Inventory Manager (Replaced Active Rentals) */}
           <div className="lg:col-span-2">
-            <div className="card p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Active Rentals</h2>
-              <div className="space-y-4">
-                {activeRentals.map(rental => (
-                  <div key={rental.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
-                    <div className="flex gap-4">
-                      <img
-                        src={rental.image}
-                        alt={rental.name}
-                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="font-semibold text-gray-900">{rental.name}</h3>
-                            <p className="text-sm text-gray-500">
-                              {new Date(rental.startDate).toLocaleDateString()} - {new Date(rental.endDate).toLocaleDateString()}
-                            </p>
+            <div className="card p-6 border-2 border-indigo-50">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Manage Catalogue</h2>
+              {loading ? (
+                <p className="text-slate-500 animate-pulse">Loading database items...</p>
+              ) : (
+                <div className="space-y-4">
+                  {products.map(product => {
+                    const isEditing = editingId === product._id;
+                    return (
+                      <div key={product._id} className={`border rounded-lg p-4 transition-all ${isEditing ? 'border-primary-500 bg-primary-50/10 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}>
+                        <div className="flex gap-4">
+                          <img
+                            src={product.images?.[0] || '/placeholder.png'}
+                            alt={product.name}
+                            className="w-16 h-16 rounded-md object-cover flex-shrink-0"
+                          />
+                          <div className="flex-grow flex flex-col justify-center">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h3 className="font-bold text-gray-900 line-clamp-1">{product.name}</h3>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest bg-gray-100 text-gray-600">
+                                  {product.category}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {isEditing ? (
+                              <div className="flex gap-2 items-center mt-2 animate-in fade-in">
+                                <div className="flex items-center gap-2 border rounded bg-white p-1">
+                                  <span className="text-xs text-gray-400 font-bold ml-2">Rent/Day: ₹</span>
+                                  <input type="number" name="pricePerDay" className="w-16 text-sm font-bold border-none p-1 focus:ring-0" value={editForm.pricePerDay} onChange={handleEditChange} />
+                                </div>
+                                <div className="flex items-center gap-2 border rounded bg-white p-1 hidden sm:flex">
+                                  <span className="text-xs text-gray-400 font-bold ml-2">Deposit: ₹</span>
+                                  <input type="number" name="securityDeposit" className="w-16 text-sm font-bold border-none p-1 focus:ring-0" value={editForm.securityDeposit} onChange={handleEditChange} />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-4 mt-1">
+                                <span className="text-sm font-bold text-gray-900">
+                                  ₹{product.pricePerDay}/day
+                                </span>
+                                <span className="text-xs text-gray-500 hidden sm:inline">
+                                  Deposit: ₹{product.securityDeposit}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                  {product.stock} in stock
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(rental.status)}`}>
-                            {rental.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-gray-900">
-                            ₹{rental.monthlyPrice}/mo
-                          </span>
-                          <div className="flex gap-2">
-                            <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                              Extend
-                            </button>
-                            <button className="text-sm text-gray-600 hover:text-gray-700 font-medium">
-                              Details
-                            </button>
-                          </div>
+                          
+                          {/* Admin Action Buttons */}
+                          {user?.role === 'admin' && (
+                            <div className="flex flex-col justify-center border-l pl-4 border-gray-100 space-y-2">
+                              {isEditing ? (
+                                <>
+                                  <button onClick={() => saveProductEdit(product._id)} className="p-1.5 bg-primary-600 text-white rounded hover:bg-primary-700 transition">
+                                    <Save size={16} />
+                                  </button>
+                                  <button onClick={cancelEditing} className="p-1.5 bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition">
+                                    <X size={16} />
+                                  </button>
+                                </>
+                              ) : (
+                                <button onClick={() => startEditing(product)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition">
+                                  <Edit2 size={16} />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Recent Orders */}
           <div className="lg:col-span-1">
             <div className="card p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Orders</h2>
-              <div className="space-y-4">
-                {recentOrders.map(order => (
-                  <div key={order.id} className="pb-4 border-b border-gray-200 last:border-0 last:pb-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-semibold text-gray-900 text-sm">{order.name}</h4>
-                        <p className="text-xs text-gray-500">{new Date(order.date).toLocaleDateString()}</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                        {order.status}
-                      </span>
-                    </div>
-                    <p className="text-sm font-semibold text-gray-900">₹{order.total}/mo</p>
-                  </div>
-                ))}
-              </div>
-              <button className="w-full mt-4 text-center text-primary-600 hover:text-primary-700 font-medium text-sm">
-                View All Orders
-              </button>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="card p-6 mt-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
-              <div className="space-y-2">
-                <button className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium text-gray-900">
-                  Browse Products
-                </button>
-                <button className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium text-gray-900">
-                  Payment History
-                </button>
-                <button className="w-full text-left px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-medium text-gray-900">
-                  Support
-                </button>
-              </div>
+              <p className="text-sm text-slate-500">
+                Recent orders will appear here once order APIs are connected.
+              </p>
             </div>
           </div>
         </div>

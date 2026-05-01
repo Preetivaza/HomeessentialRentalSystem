@@ -1,27 +1,12 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
 import Hero from '../components/Hero'
 import { ArrowRight, Shield, Truck, Zap, Heart, CheckCircle2 } from 'lucide-react'
-import { productService } from '../services/productService'
+import { useProducts } from '../hooks/useProducts'
 
 export default function Home() {
-  const [featuredProducts, setFeaturedProducts] = useState([]);
-
-  useEffect(() => {
-    const fetchFeatured = async () => {
-      try {
-        const data = await productService.getProducts({ limit: 4 });
-        if (data.success && data.data && data.data.products) {
-          setFeaturedProducts(data.data.products);
-        }
-      } catch (error) {
-        console.error("Failed to fetch featured products", error);
-      }
-    };
-    fetchFeatured();
-  }, []);
+  const { products: featuredProducts } = useProducts({ limit: 4 });
 
   const features = [
     {
