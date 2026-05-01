@@ -41,6 +41,7 @@ if (!fs.existsSync(uploadDir)) {
 // Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+
 app.use(
   cors({
     origin: [
@@ -48,12 +49,14 @@ app.use(
       "http://localhost:3000",
       "http://localhost:5173",
       "http://127.0.0.1:3000",
-      "https://homeessential.vercel.app",
+      
+      
     ].filter(Boolean),
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE","OPTIONS"],
     credentials: true,
   })
 );
+app.options("*", cors());
 
 app.use(helmet());
 app.use(mongoSanitize());
