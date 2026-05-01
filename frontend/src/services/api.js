@@ -25,7 +25,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Let app-level auth state decide what to do.
+   
       window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);

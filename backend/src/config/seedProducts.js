@@ -1,10 +1,6 @@
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 
-/**
- * Minimal core products to ensure the app has content on first launch.
- * All other products should be added via the Admin Dashboard.
- */
 const MINIMAL_CORE_PRODUCTS = [
   {
     name: 'Cloud Modular Sofa',

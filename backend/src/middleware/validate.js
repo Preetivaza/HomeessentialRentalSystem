@@ -2,8 +2,7 @@ import { ErrorResponse } from './errorHandler.js';
 
 const validate = (schema) => {
   return (req, res, next) => {
-    // Back-compat: validate(fn) assumes body validator.
-    // New: validate({ body, query, params }) validates each segment if provided.
+
     const bodyValidator = typeof schema === 'function' ? schema : schema?.body;
     const queryValidator = typeof schema === 'object' ? schema?.query : undefined;
     const paramsValidator = typeof schema === 'object' ? schema?.params : undefined;
