@@ -49,7 +49,7 @@ app.use(
       "http://localhost:3000",
       "http://localhost:5173",
       "http://127.0.0.1:3000",
-      
+       "https://homeessential-rental-system-e6kx.vercel.app"
       
     ].filter(Boolean),
     methods: ["GET", "POST", "PUT", "DELETE","OPTIONS"],
