@@ -1,148 +1,233 @@
-import asyncHandler from '../middleware/asyncHandler.js';
-import { ErrorResponse } from '../middleware/errorHandler.js';
-import { sendResponse } from '../utils/ApiResponse.js';
-import stripe from '../config/stripe.js';
-import Payment from '../models/Payment.js';
-import Order from '../models/Order.js';
+import Razorpay from "razorpay";
+import crypto from "crypto";
+import mongoose from "mongoose";
+import Payment from "../models/Payment.js";
+import Order from "../models/Order.js";
 
-export const createPaymentIntent = asyncHandler(async (req, res, next) => {
-  const { orderId } = req.body;
+/**
+ * 🔗 Razorpay connection (THIS is where .env is used)
+ */
 
-  const order = await Order.findById(orderId);
+// =======================================================
+// 🟢 CREATE ORDER (CONNECTS TO RAZORPAY)
+// =======================================================
 
-  if (!order) {
-    return next(new ErrorResponse('Order not found', 404));
-  }
-
-  if (order.user.toString() !== req.user.id) {
-    return next(new ErrorResponse('Not authorized', 403));
-  }
-
-  if (order.paymentStatus === 'paid') {
-    return next(new ErrorResponse('Order already paid', 400));
-  }
-
-  const amount = Math.round((order.totalAmount + order.securityDeposit) * 100);
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount,
-    currency: 'inr',
-    metadata: {
-      orderId: order._id.toString(),
-      userId: req.user.id
-    }
-  });
-
-  const payment = await Payment.create({
-    order: orderId,
-    user: req.user.id,
-    stripePaymentIntentId: paymentIntent.id,
-    amount: order.totalAmount + order.securityDeposit,
-    status: 'pending'
-  });
-
-  sendResponse(res, 200, {
-    clientSecret: paymentIntent.client_secret,
-    paymentId: payment._id
-  }, 'Payment intent created');
+export const createOrder = async (req, res) => {
+  const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
-
-export const handleWebhook = asyncHandler(async (req, res, next) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
-
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+    const { orderId } = req.body;
+    const user = req.user._id;
+
+    // ── 1. Validate ─────────────────────────
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "orderId is required",
+      });
+    }
+
+    // ── 2. Fetch Order ──────────────────────
+    const order = await Order.findById(orderId).populate("productId");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.user.toString() !== user.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    if (order.paymentStatus === "paid") {
+      return res.status(409).json({
+        success: false,
+        message: "Order already paid",
+      });
+    }
+
+    // ── 3. Prevent duplicate payment ────────
+  const existing = await Payment.findOne({
+  orderRef: orderId,
+  status: { $in: ["pending", "success"] },
+});
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "Payment already initiated",
+      });
+    }
+
+    // ── 4. Create Razorpay order ────────────
+   const amountInPaise = Math.round(order.totalAmount * 100);
+
+    if (amountInPaise <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order amount",
+      });
+}
+
+    const razorpayOrder = await razorpay.orders.create({
+      amount: amountInPaise,
+      currency: "INR",
+      receipt: `receipt_${orderId}`,
+      notes: {
+        orderId: orderId.toString(),
+        user: user.toString(),
+      },
+    });
+
+    // ── 5. Save Payment ─────────────────────
+   const payment = await Payment.create({
+    user,
+    orderRef: orderId,
+    amount: order.totalAmount,
+    orderId: razorpayOrder.id,
+    status: "pending",
+});
+
+    // ── 6. Response ─────────────────────────
+    return res.status(201).json({
+      success: true,
+      message: "Order created",
+      data: {
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        paymentId: payment._id,
+      },
+    });
+  } catch (error) {
+    console.error("createOrder error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+
+// =======================================================
+// 🔵 VERIFY PAYMENT
+// =======================================================
+
+export const verifyPayment = async (req, res) => {
+  try {
+    const { orderId, paymentId, signature } = req.body;
+    const user = req.user._id;
+
+    if (!orderId || !paymentId || !signature) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+      });
+    }
+
+    // ── 1. Verify signature ─────────────────
+    const body = orderId + "|" + paymentId;
+
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
+
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(expectedSignature),
+      Buffer.from(signature)
     );
-  } catch (err) {
-    return next(new ErrorResponse(`Webhook Error: ${err.message}`, 400));
-  }
 
-  if (event.type === 'payment_intent.succeeded') {
-    const paymentIntent = event.data.object;
+    if (!isValid) {
+      // mark failed
+     console.log("Payment failed:", {
+        orderId,
+        paymentId,
+        user,
+      });
 
-    const payment = await Payment.findOne({
-      stripePaymentIntentId: paymentIntent.id
+      await Payment.findOneAndUpdate(
+        { orderId },
+        { status: "failed" }
+      );
+
+      return res.status(400).json({
+        success: false,
+        message: "Invalid signature",
+      });
+    }
+
+    // ── 2. Find Payment ─────────────────────
+    const payment = await Payment.findOne({ orderId, user});
+
+    if (payment && payment.user.toString() !== user.toString()) {
+    return res.status(403).json({
+      success: false,
+      message: "Unauthorized",
+    });
+}
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment not found",
+      });
+    }
+
+    if (payment.status === "success") {
+      return res.status(409).json({
+        success: false,
+        message: "Already verified",
+      });
+    }
+
+    // ── 3. Find Order ───────────────────────
+   const order = await Order.findById(payment.orderRef);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.paymentStatus === "paid") {
+      return res.status(409).json({
+        success: false,
+        message: "Order already paid",
+      });
+    }
+
+    // ── 4. Transaction ──────────────────────
+    const session = await mongoose.startSession();
+
+    await session.withTransaction(async () => {
+      payment.status = "success";
+      payment.paymentId = paymentId;
+      payment.signature = signature;
+      await payment.save({ session });
+
+      order.paymentStatus = "paid";
+      await order.save({ session });
     });
 
-    if (payment) {
-      payment.status = 'succeeded';
-      await payment.save();
-
-      const order = await Order.findById(payment.order);
-      if (order) {
-        order.paymentStatus = 'paid';
-        order.status = 'confirmed';
-        await order.save();
-      }
-    }
-  }
-
-  if (event.type === 'payment_intent.payment_failed') {
-    const paymentIntent = event.data.object;
-
-    const payment = await Payment.findOne({
-      stripePaymentIntentId: paymentIntent.id
+    session.endSession();
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified",
     });
+  } catch (error) {
+    console.error("verifyPayment error:", error);
 
-    if (payment) {
-      payment.status = 'failed';
-      await payment.save();
-
-      const order = await Order.findById(payment.order);
-      if (order) {
-        order.paymentStatus = 'failed';
-        await order.save();
-      }
-    }
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
-
-  res.json({ received: true });
-});
-
-export const getPaymentStatus = asyncHandler(async (req, res, next) => {
-  const payment = await Payment.findById(req.params.id)
-    .populate('order')
-    .populate('user', 'name email');
-
-  if (!payment) {
-    return next(new ErrorResponse('Payment not found', 404));
-  }
-
-  if (payment.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
-    return next(new ErrorResponse('Not authorized', 403));
-  }
-
-  sendResponse(res, 200, { payment }, 'Payment status retrieved');
-});
-
-export const refundPayment = asyncHandler(async (req, res, next) => {
-  const payment = await Payment.findById(req.params.id);
-
-  if (!payment) {
-    return next(new ErrorResponse('Payment not found', 404));
-  }
-
-  if (payment.status !== 'succeeded') {
-    return next(new ErrorResponse('Payment cannot be refunded', 400));
-  }
-
-  const refund = await stripe.refunds.create({
-    payment_intent: payment.stripePaymentIntentId
-  });
-
-  payment.status = 'refunded';
-  await payment.save();
-
-  const order = await Order.findById(payment.order);
-  if (order) {
-    order.paymentStatus = 'refunded';
-    order.status = 'cancelled';
-    await order.save();
-  }
-
-  sendResponse(res, 200, { refund, payment }, 'Payment refunded successfully');
-});
+};

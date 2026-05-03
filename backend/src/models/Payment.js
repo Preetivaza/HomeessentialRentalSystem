@@ -1,54 +1,64 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
   {
-    order: {
+    orderRef: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Order',
-      required: true
+      ref: "Order",
+      required: true,
     },
+
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+      ref: "User",
+      required: true,
     },
-    stripePaymentIntentId: {
-      type: String,
-      required: true
-    },
+
     amount: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
     },
+
     currency: {
       type: String,
-      default: 'inr',
-      uppercase: true
+      default: "INR",
     },
+
+    orderId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    paymentId: {
+      type: String,
+      default: null,
+    },
+
+    signature: {
+      type: String,
+      default: null,
+    },
+
     status: {
       type: String,
-      enum: ['pending', 'processing', 'succeeded', 'failed', 'canceled', 'refunded'],
-      default: 'pending'
+      enum: ["pending", "success", "failed"],
+      default: "pending",
     },
-    paymentMethod: {
-      type: String,
-      enum: ['card', 'upi', 'netbanking'],
-      default: 'card'
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
-    metadata: {
-      type: Map,
-      of: String
-    }
   },
   {
-    timestamps: true
+    timestamps: true,
   }
 );
 
-// Index for payment lookup
-paymentSchema.index({ stripePaymentIntentId: 1 });
-paymentSchema.index({ order: 1 });
+// ✅ Indexes (NO duplicates)
+paymentSchema.index({ orderRef: 1 });
 paymentSchema.index({ user: 1 });
 
-export default mongoose.model('Payment', paymentSchema);
+export default mongoose.model("Payment", paymentSchema);

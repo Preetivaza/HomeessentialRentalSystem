@@ -10,9 +10,6 @@ import morgan from 'morgan';
 import connectDB from './config/db.js';
 import { seedInitialStaticProducts } from './config/seedProducts.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
@@ -22,116 +19,29 @@ import userRoutes from './routes/user.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import bundleRoutes from './routes/bundle.routes.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 
-connectDB().then(() => {
-  seedInitialStaticProducts().then(() => {
-  });
-});
-
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../uploads/identities');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Serve static uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  process.env.CLIENT_URL,
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.includes("vercel.app")
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS blocked"));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  })
-);
-
-app.options("*", cors());
-
-app.use(helmet());
-app.use(mongoSanitize());
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests from this IP, please try again later'
-});
-app.use('/api', limiter);
-
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
-
-app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
-  });
-});
+// Security
+app.use(helmet());
+app.use(mongoSanitize());
 
+// Rate limit
+app.use('/api', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+}));
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
+app.use('/api/payments', paymentRoutes); 
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/bundles', bundleRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found'
-  });
-});
-
+// Error
 app.use(errorHandler);
-
-const PORT = process.env.PORT || 5001;
-
-const server = app.listen(PORT, () => {
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
-  if (server) {
-    server.close(() => {
-      process.exit(1);
-    });
-  } else {
-    process.exit(1);
-  }
-});
-
-process.on('SIGTERM', () => {
-  if (server) {
-    server.close(() => {
-    });
-  }
-});
-
-export default app;

@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
 import PrivateRoute from './components/PrivateRoute'
 import Navbar from './components/Navbar'
+import HowItWorks from "./pages/HowItWorks";
 import Footer from './components/Footer'
 import Home from './pages/Home'
 import Products from './pages/Products'
@@ -34,36 +35,119 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
-        <Route path="/products" element={<PageWrapper><Products /></PageWrapper>} />
-        <Route path="/product/:id" element={<PageWrapper><ProductDetail /></PageWrapper>} />
-        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
-        <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
-        <Route path="/signup" element={<PageWrapper><Register /></PageWrapper>} />
-        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
-        <Route path="/reset-password/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
-        
+        <Route
+          path="/"
+          element={
+            <PageWrapper>
+              <Home />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <PageWrapper>
+              <Products />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/product/:id"
+          element={
+            <PageWrapper>
+              <ProductDetail />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PageWrapper>
+              <Login />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PageWrapper>
+              <Register />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PageWrapper>
+              <Register />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PageWrapper>
+              <ForgotPassword />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/reset-password/:token"
+          element={
+            <PageWrapper>
+              <ResetPassword />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/how-it-works"
+          element={
+            <PageWrapper>
+              <HowItWorks />
+            </PageWrapper>
+          }
+        />
         {/* Protected Routes */}
-        <Route path="/profile" element={
-          <PrivateRoute>
-            <PageWrapper><Profile /></PageWrapper>
-          </PrivateRoute>
-        } />
-        <Route path="/cart" element={
-          <PrivateRoute>
-            <PageWrapper><Cart /></PageWrapper>
-          </PrivateRoute>
-        } />
-        <Route path="/checkout" element={
-          <PrivateRoute>
-            <PageWrapper><Checkout /></PageWrapper>
-          </PrivateRoute>
-        } />
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <PageWrapper><Dashboard /></PageWrapper>
-          </PrivateRoute>
-        } />
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <PageWrapper>
+                <Profile />
+              </PageWrapper>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <PrivateRoute>
+              <PageWrapper>
+                <Cart />
+              </PageWrapper>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <PrivateRoute>
+              <PageWrapper>
+                <Checkout />
+              </PageWrapper>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <PageWrapper>
+                <Dashboard />
+              </PageWrapper>
+            </PrivateRoute>
+          }
+        />
       </Routes>
     </AnimatePresence>
   );
