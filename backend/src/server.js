@@ -48,6 +48,11 @@ app.use('/api', rateLimit({
   max: 100,
 }));
 
+// Root route (Health Check)
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Home Essentials API is running...' });
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
