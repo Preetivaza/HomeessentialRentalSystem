@@ -7,6 +7,7 @@ import ProductInfo from '../components/ProductInfo'
 import PricingBlock from '../components/PricingBlock'
 import { useProduct } from '../hooks/useProduct'
 import { useRentalCalculation } from '../hooks/useRentalCalculation'
+import { useCart } from '../hooks/useCart'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -21,6 +22,7 @@ export default function ProductDetail() {
   // Hooks (Phase 2)
   const { product, isLoading, error } = useProduct(id)
   const { calculation, isCalculating } = useRentalCalculation({ productId: id, ...config })
+  const { addItem } = useCart()
 
   if (isLoading) {
     return (
@@ -118,7 +120,10 @@ export default function ProductDetail() {
         quantity={config.quantity}
         calculation={calculation}
         isCalculating={isCalculating}
-        onProceed={() => navigate('/checkout')}
+        onProceed={() => {
+          addItem(product, config)
+          navigate('/checkout')
+        }}
       />
     </div>
   )

@@ -88,12 +88,13 @@ export const CartProvider = ({ children }) => {
 
   const totals = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + getItemSubtotal(item), 0);
+    const deposit = items.reduce((sum, item) => sum + ((item.securityDeposit || 0) * (item.quantity || 1)), 0);
 
     const tax = subtotal * 0.18;
     const deliveryFee = 0;
-    const total = subtotal + tax + deliveryFee;
+    const total = subtotal + tax + deposit + deliveryFee;
 
-    return { subtotal, tax, deliveryFee, total };
+    return { subtotal, tax, deposit, deliveryFee, total };
   }, [items]);
 
   const value = {

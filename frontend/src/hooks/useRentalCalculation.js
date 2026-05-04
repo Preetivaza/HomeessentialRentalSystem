@@ -39,14 +39,15 @@ export const useRentalCalculation = (arg1, arg2, arg3, arg4) => {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const result = await productService.calculateCost(
+        const response = await productService.calculateCost(
           productId, 
           { startDate, endDate, quantity },
           { signal: controller.signal }
         );
         
-        cacheRef.current.set(cacheKey, result);
-        setCalculation(result);
+        const resultData = response?.data || response;
+        cacheRef.current.set(cacheKey, resultData);
+        setCalculation(resultData);
       } catch (err) {
          if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
            console.error("Pricing Engine Error:", err);

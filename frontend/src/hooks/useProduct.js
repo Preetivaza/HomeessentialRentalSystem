@@ -16,7 +16,7 @@ export const useProduct = (id) => {
       try {
         setIsLoading(true);
         const data = await productService.getProduct(id, { signal: controller.signal });
-        setProduct(data.product || data);
+        setProduct(data?.data?.product || data?.product || data);
         setError(null);
       } catch (err) {
         if (err.name !== 'CanceledError' && err.name !== 'AbortError') {

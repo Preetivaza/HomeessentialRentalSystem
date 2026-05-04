@@ -7,7 +7,7 @@ import orderService from '../services/orderService.js';
 // @route   POST /api/orders
 // @access  Private
 export const createOrder = asyncHandler(async (req, res, next) => {
-  const { items, shippingAddress, notes, bundleId } = req.body;
+  const { items, shippingAddress, notes, bundleId, discountCode } = req.body;
   const idempotencyKey = req.headers['x-idempotency-key'];
   const insuranceOpted = req.body.insuranceOpted === true;
 
@@ -27,7 +27,8 @@ export const createOrder = asyncHandler(async (req, res, next) => {
     notes,
     bundleId,
     idempotencyKey,
-    insuranceOpted
+    insuranceOpted,
+    discountCode
   );
 
   // 3. Post-processing (non-critical tasks)

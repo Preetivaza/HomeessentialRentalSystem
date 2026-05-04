@@ -14,7 +14,7 @@ class OrderService {
   /**
    * Process a full checkout transaction encapsulating calculations, limits, and inventory.
    */
-  async processCheckoutTransaction(userId, items, shippingAddress, notes, bundleId, idempotencyKey, insuranceOpted) {
+  async processCheckoutTransaction(userId, items, shippingAddress, notes, bundleId, idempotencyKey, insuranceOpted, discountCode) {
     const session = await mongoose.startSession();
     session.startTransaction();
 
@@ -69,6 +69,17 @@ class OrderService {
         });
       }
 
+      let discountAmount = 0;
+      if (discountCode) {
+        // Mock simple discount logic
+        if (discountCode.toUpperCase() === 'WELCOME10') {
+          discountAmount = totalAmount * 0.10;
+        } else if (discountCode.toUpperCase() === 'SAVE500') {
+          discountAmount = Math.min(500, totalAmount);
+        }
+      }
+
+      totalAmount = Math.max(0, totalAmount - discountAmount);
       const insuranceAmount = pricingService.calculateInsuranceAmount(totalAmount, insuranceOpted);
 
       const orderData = {
@@ -76,6 +87,8 @@ class OrderService {
         items: enrichedItems,
         totalAmount: totalAmount + insuranceAmount,
         securityDeposit: totalDeposit,
+        discount: discountAmount,
+        discountCode: discountCode || null,
         insurance: {
           opted: insuranceOpted,
           amount: insuranceAmount

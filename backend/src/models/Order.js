@@ -71,6 +71,14 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    discount: {
+      type: Number,
+      default: 0
+    },
+    discountCode: {
+      type: String,
+      default: null
+    },
     status: {
       type: String,
       enum: ['pending', 'paid', 'active', 'completed', 'cancelled'],

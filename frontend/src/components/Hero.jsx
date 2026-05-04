@@ -29,7 +29,7 @@ const Hero = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/how-it-works" className="btn-premium group">
+              <Link to="/products" className="btn-premium group">
                 Browse Collection
                 <ShoppingBag size={18} />
               </Link>
